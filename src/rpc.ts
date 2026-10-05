@@ -1,10 +1,11 @@
 import { randomUUID } from 'node:crypto';
 import type { FastifyBaseLogger } from 'fastify';
+import type { Commerce } from './commerce';
 import type { Config } from './config';
 import { RPC_CODES, RpcError, rpcError, rpcResult, type RpcId } from './jsonrpc';
 import { screenToken } from './screen';
 import type { ScreenResult } from './types';
-import { parseMessageSendParams, parseScreenParams } from './validation';
+import { extractDataPart, parseMessageSendParams, parseScreenParams } from './validation';
 
 /** Wrap a ScreenResult as an A2A completed Task carrying a DataPart artifact. */
 function toA2ATask(result: ScreenResult) {
@@ -22,6 +23,16 @@ function toA2ATask(result: ScreenResult) {
   };
 }
 
+/** Wrap an A2A agent message carrying a single DataPart (negotiate / notify_funded). */
+function toA2AMessage(data: unknown) {
+  return {
+    kind: 'message',
+    role: 'agent',
+    messageId: randomUUID(),
+    parts: [{ kind: 'data', data }],
+  };
+}
+
 function extractId(body: unknown): RpcId {
   if (body && typeof body === 'object') {
     const id = (body as { id?: unknown }).id;
@@ -34,7 +45,12 @@ function extractId(body: unknown): RpcId {
  * Handle a single JSON-RPC 2.0 request. Always resolves to a well-formed
  * JSON-RPC envelope (success or error) — never throws.
  */
-export async function handleRpc(body: unknown, config: Config, log: FastifyBaseLogger) {
+export async function handleRpc(
+  body: unknown,
+  config: Config,
+  log: FastifyBaseLogger,
+  commerce: Commerce | null = null,
+) {
   const id = extractId(body);
 
   if (!body || typeof body !== 'object' || Array.isArray(body)) {
@@ -57,6 +73,24 @@ export async function handleRpc(body: unknown, config: Config, log: FastifyBaseL
         return rpcResult(id, await screenToken(input, config));
       }
       case 'message/send': {
+        // Route ERC-8183 commerce skills before falling back to screening.
+        const data = extractDataPart(params);
+        const skill = typeof data?.skill === 'string' ? data.skill : null;
+
+        if (skill === 'negotiate') {
+          if (!commerce) {
+            return rpcError(id, RPC_CODES.METHOD_NOT_FOUND, 'negotiate is not available (commerce disabled)');
+          }
+          return rpcResult(id, toA2AMessage(await commerce.seller.negotiate(data as Record<string, unknown>)));
+        }
+        if (skill === 'notify_funded') {
+          if (!commerce) {
+            return rpcError(id, RPC_CODES.METHOD_NOT_FOUND, 'notify_funded is not available (commerce disabled)');
+          }
+          const jobId = String((data as Record<string, unknown>).job_id ?? '');
+          return rpcResult(id, toA2AMessage(await commerce.delivery.notifyFunded(jobId)));
+        }
+
         const input = parseMessageSendParams(params);
         return rpcResult(id, toA2ATask(await screenToken(input, config)));
       }

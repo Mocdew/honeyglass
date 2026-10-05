@@ -1,6 +1,7 @@
 import rateLimit from '@fastify/rate-limit';
 import Fastify, { type FastifyInstance } from 'fastify';
 import { buildAgentCard } from './agentCard';
+import { buildCommerce } from './commerce';
 import type { Config } from './config';
 import { APP_NAME, APP_VERSION } from './constants';
 import { RPC_CODES, rpcError } from './jsonrpc';
@@ -28,6 +29,14 @@ export async function buildServer(config: Config): Promise<FastifyInstance> {
     errorResponseBuilder: (_req, context) =>
       rpcError(null, RPC_CODES.RATE_LIMITED, `Rate limit exceeded, retry in ${context.after}`),
   });
+
+  // Optional ERC-8183 commerce layer (null when COMMERCE_ENABLED is not set).
+  const commerce = buildCommerce(config, app.log);
+  if (commerce) {
+    app.log.info(
+      `Commerce enabled: seller ${commerce.sellerAddress} on ${commerce.network} (category: ${commerce.category})`,
+    );
+  }
 
   // Convert body-parse (and other) errors into deterministic JSON-RPC envelopes on POST /.
   app.setErrorHandler((err, req, reply) => {
@@ -62,12 +71,27 @@ export async function buildServer(config: Config): Promise<FastifyInstance> {
   // A2A Agent Card.
   app.get('/.well-known/agent-card.json', async (req) => {
     const host = req.headers.host ?? `${config.host}:${config.port}`;
-    return buildAgentCard(config, publicUrl(config, req.protocol, host));
+    return buildAgentCard(config, publicUrl(config, req.protocol, host), commerce);
   });
+
+  // Public deliverable manifests — the target of the on-chain deliverable URL.
+  app.get<{ Params: { jobId: string } }>(
+    '/deliverables/:jobId',
+    { config: { rateLimit: false } },
+    async (req, reply) => {
+      const { jobId } = req.params;
+      if (!commerce || !/^\d+$/.test(jobId)) {
+        return reply.code(404).send({ error: 'Not found' });
+      }
+      const stored = commerce.store.read(jobId);
+      if (!stored) return reply.code(404).send({ error: 'Deliverable not found' });
+      return reply.code(200).type('application/json').send(stored.manifestText);
+    },
+  );
 
   // JSON-RPC 2.0 task endpoint.
   app.post('/', async (req, reply) => {
-    const response = await handleRpc(req.body, config, app.log);
+    const response = await handleRpc(req.body, config, app.log, commerce);
     return reply.code(200).type('application/json').send(response);
   });
 

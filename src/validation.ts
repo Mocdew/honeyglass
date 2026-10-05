@@ -37,6 +37,26 @@ interface MessagePart {
 }
 
 /**
+ * Merge the data parts of an A2A `message/send` into one object, for routing
+ * on a `skill` field (negotiate / notify_funded) before any screen parsing.
+ * Returns null when the shape is not a message with parts.
+ */
+export function extractDataPart(params: unknown): Record<string, unknown> | null {
+  const p = params as { message?: { parts?: unknown } } | undefined;
+  const parts = p?.message?.parts;
+  if (!Array.isArray(parts)) return null;
+  let merged: Record<string, unknown> = {};
+  let found = false;
+  for (const part of parts as MessagePart[]) {
+    if (part?.kind === 'data' && part.data && typeof part.data === 'object') {
+      merged = { ...merged, ...part.data };
+      found = true;
+    }
+  }
+  return found ? merged : null;
+}
+
+/**
  * Parse A2A `message/send` params. Accepts a DataPart carrying
  * { address, chainId?, dryRun? }, or a TextPart whose text is a token address.
  */

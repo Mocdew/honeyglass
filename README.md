@@ -218,6 +218,63 @@ Once all are green, register the agent in Pokter and point ERC-8004 registration
 
 ---
 
+## ERC-8183 commerce (optional — makes Honeyglass hireable)
+
+Beyond the read-only screener, Honeyglass can act as an **ERC-8183 seller agent** on
+BNB testnet (chain 97), built on **`@bnbagent/sdk`** so quotes and settlement are
+correct by construction (same library the Pokter marketplace verifies against).
+
+This layer is **off by default** (`COMMERCE_ENABLED` unset) and fully isolated from
+the read-only screening engine. When enabled, it adds two A2A skills:
+
+- **`negotiate`** — returns a wallet-signed price quote (`price`, `currency`,
+  `negotiation_hash`, `provider_sig`) bound to the live chain-97 escrow
+  (`0xa206…B0DE`), currency **U** (`0xc70B…5565`). Buyers anchor it on-chain via
+  `createJob + fund`, then call `notify_funded`.
+- **`notify_funded`** — verifies the funded job names this seller, replies
+  `accepted` at once, then **runs a real Honeyglass screen** of the token in the task
+  and `submit`s the deliverable hash + a public URL on-chain. The manifest is served
+  at `GET /deliverables/:jobId`.
+
+Quotes are short-lived (default 900s) and the SDK caps the TTL. The seller signs with
+its ERC-8004 identity wallet; the signature is verified off-chain by buyer and seller.
+
+### Going live as a seller (your actions)
+
+The seller must **transact on-chain**, which needs a funded wallet — these steps are
+yours (the service never holds your personal keys, only a dedicated testnet hot wallet):
+
+1. **Generate the seller wallet** (writes keys to `.env`, prints only the address):
+   ```bash
+   npm run gen-wallet
+   ```
+2. **Fund that address with tBNB** for gas: <https://www.bnbchain.org/en/testnet-faucet>
+   (it needs gas only; it *receives* the U payment token from escrow).
+3. **Register the ERC-8004 identity** on chain 97 (needs the funded wallet):
+   ```bash
+   PUBLIC_URL=https://honeyglass.onrender.com npm run register-identity
+   ```
+4. **Deploy as always-on**: upgrade the Render service to **Starter** (the probe records
+   downtime publicly and permanently; free-tier sleep will fail it).
+5. **Add a persistent disk** (Render → service → Disks), e.g. mount `/var/data`, and set
+   `DELIVERABLE_DIR=/var/data/deliverables`. Delivered manifests are referenced by an
+   **immutable on-chain URL**, so the bytes must survive redeploys.
+6. **Enable commerce** in the Render dashboard (Environment): `COMMERCE_ENABLED=true`,
+   `SELLER_PRIVATE_KEY`, `SELLER_WALLET_PASSWORD` (secrets — from your `.env`),
+   `SERVICE_PRICE_RAW`, `COMMERCE_CATEGORY`, `DELIVERABLE_DIR`. Redeploy.
+
+Do steps 1–5 **before** enabling commerce — a seller that quotes but cannot deliver (no
+gas) or whose deliverable URL 404s (no disk) produces permanent on-chain failures.
+
+### Pokter compatibility checklist (seller)
+
+- [ ] Agent Card lists `negotiate` + `notify_funded` and a category.
+- [ ] `negotiate` returns a quote whose `provider_sig` recovers to the ERC-8004 seller wallet, with `chain_id: 97` and `verifying_contract: 0xa206…B0DE`.
+- [ ] The seller wallet is the **registered ERC-8004 identity** on chain 97 and is **funded**.
+- [ ] A funded test job → `notify_funded` returns `accepted`, then the job reaches `SUBMITTED` with a `deliverable_url` that resolves to the manifest.
+- [ ] **The quote can actually be paid**: currency + chain match the escrow (U on 97), and a job funded against it settles to `COMPLETED`.
+- [ ] The host is always-on (no probe records a missed day).
+
 ## Disclosures
 
 Honeyglass is an automated, read-only risk screen on BNB Smart Chain (mainnet 56, testnet 97) for BEP-20 tokens, using third-party sources (GoPlus, honeypot.is) that it does not control. Results reflect source data at fetch time; contracts can change afterward. **This is not financial advice and not a guarantee of safety.** A `PASS` means no blocking signals were found in the available checks — nothing more. Testnet coverage is frequently unavailable, so testnet results are often `UNKNOWN`.

@@ -5,6 +5,7 @@ dist/
 *.log
 coverage/
 .DS_Store
+data/
 
 # Stray empty nested repo left over from an earlier concept; safe to delete.
 Portfolio-Watch/

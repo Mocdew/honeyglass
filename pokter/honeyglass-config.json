@@ -1,0 +1,14 @@
+{
+  "schema": "https://pokter.xyz/schemas/starter-config-v1",
+  "agent": "Honeyglass",
+  "category": "REPLACE_WITH_POKTER_CATEGORY_SLUG",
+  "protocol": "a2a",
+  "behavior": {
+    "target": "BEP-20 token contracts on BNB Smart Chain (56) and Testnet (97)",
+    "policy": "Read-only safety screen via GoPlus + honeypot.is, balanced rubric",
+    "output": "PASS / CAUTION / FAIL / UNKNOWN verdict with per-signal evidence and sources"
+  },
+  "endpoint": "https://honeyglass.onrender.com",
+  "agentCard": "https://honeyglass.onrender.com/.well-known/agent-card.json",
+  "note": "Honeyglass is read-only and never executes trades or moves funds. It is not Portfolio Watch / grid-trading. Pick the real category slug in Pokter's category dropdown (a screening/security category, NOT grid-trading) — the placeholder above is not a valid slug. Pokter verifies the public endpoint independently; the behavior above matches what the live endpoint returns."
+}

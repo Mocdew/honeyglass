@@ -22,3 +22,23 @@ services:
       # Optional: higher GoPlus rate limits. Leave unset for the free tier.
       - key: GOPLUS_ACCESS_TOKEN
         sync: false
+
+      # --- ERC-8183 commerce (OPTIONAL) ---
+      # Leave COMMERCE_ENABLED unset to run read-only (no wallet, no on-chain).
+      # To become a hireable seller, FIRST fund + register the wallet, upgrade to
+      # an always-on plan, and add a persistent disk for deliverables (see README),
+      # THEN set these in the dashboard (the key fields are secrets — never commit).
+      - key: COMMERCE_ENABLED
+        sync: false
+      - key: SELLER_PRIVATE_KEY
+        sync: false
+      - key: SELLER_WALLET_PASSWORD
+        sync: false
+      - key: SERVICE_PRICE_RAW
+        sync: false
+      - key: COMMERCE_CATEGORY
+        sync: false
+      # Point this at the persistent disk mount when commerce is enabled,
+      # e.g. /var/data/deliverables (requires a Render disk).
+      - key: DELIVERABLE_DIR
+        sync: false

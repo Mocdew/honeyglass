@@ -13,13 +13,17 @@
     "start": "node dist/index.js",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "gen-wallet": "node scripts/gen-seller-wallet.mjs",
+    "register-identity": "node scripts/register-identity.mjs"
   },
   "dependencies": {
+    "@bnbagent/sdk": "^0.6.0",
     "@fastify/rate-limit": "^10.2.0",
     "@types/node": "^20.14.0",
     "fastify": "^5.2.0",
     "typescript": "^5.6.3",
+    "viem": "^2.21.0",
     "zod": "^3.23.8"
   },
   "devDependencies": {
