@@ -1,0 +1,24 @@
+# Render blueprint for Honeyglass.
+# Deploy: push this repo to GitHub, then in Render choose "New +" > "Blueprint"
+# and point it at the repo. Render injects PORT automatically.
+services:
+  - type: web
+    name: honeyglass
+    runtime: node
+    plan: free
+    buildCommand: npm install && npm run build
+    startCommand: npm start
+    healthCheckPath: /health
+    autoDeploy: true
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: LOG_LEVEL
+        value: info
+      # Set this to your Render URL after the first deploy so the Agent Card
+      # advertises the correct public URL (e.g. https://honeyglass.onrender.com).
+      - key: PUBLIC_URL
+        sync: false
+      # Optional: higher GoPlus rate limits. Leave unset for the free tier.
+      - key: GOPLUS_ACCESS_TOKEN
+        sync: false

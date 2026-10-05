@@ -1,0 +1,10 @@
+node_modules/
+dist/
+.env
+.env.local
+*.log
+coverage/
+.DS_Store
+
+# Stray empty nested repo left over from an earlier concept; safe to delete.
+Portfolio-Watch/

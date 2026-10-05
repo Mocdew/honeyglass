@@ -1,0 +1,30 @@
+{
+  "name": "honeyglass",
+  "version": "1.0.0",
+  "description": "Honeyglass — evidence-first pre-trade safety screen for BEP-20 tokens on BNB Smart Chain. A2A / JSON-RPC 2.0 service.",
+  "license": "MIT",
+  "private": true,
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "build": "tsc -p tsconfig.json",
+    "start": "node dist/index.js",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "dependencies": {
+    "@fastify/rate-limit": "^10.2.0",
+    "fastify": "^5.2.0",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@types/node": "^20.14.0",
+    "pino-pretty": "^11.2.2",
+    "tsx": "^4.19.2",
+    "typescript": "^5.6.3",
+    "vitest": "^2.1.8"
+  }
+}
